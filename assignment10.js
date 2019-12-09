@@ -53,7 +53,7 @@ function handler(req, res) {
 var desiredValue = 0; // desired value var
 var actualValue = 0; // variable for actual value (output value)
 
-var pwm;
+var pwm = 0;
 var factor = 0.1; // proportional factor that determines the speed of aproaching toward desired value
 
 http.listen(8080); // server will listen on port 8080
@@ -65,6 +65,9 @@ board.on("ready", function() {
     });
     board.analogRead(1, function(value) {
         actualValue = value; // continuous read of pin A1
+        if(actualValue <= 880 && actualValue >= 160) {
+            board.digitalWrite(13,0);
+        }
     });
     
     startControlAlgorithm(); // to start control alg.
@@ -96,10 +99,16 @@ function controlAlgorithm () {
     if (pwm > 0) {board.digitalWrite(2,1); board.digitalWrite(4,0);}; // določimo smer če je > 0
     if (pwm < 0) {board.digitalWrite(2,0); board.digitalWrite(4,1);}; // določimo smer če je < 0
     board.analogWrite(3, Math.abs(pwm));
-    if(actualValue > 890 || actualValue < 140) {
+    
+    if(actualValue > 890 || actualValue < 147) {
         stopControlAlgorithm();
         board.digitalWrite(13,1);
     }
+    else
+    {
+        board.digitalWrite(13,0);
+    }
+
 };
 
 function startControlAlgorithm () {
@@ -107,10 +116,10 @@ function startControlAlgorithm () {
         controlAlgorithmStartedFlag = 1;
         intervalCtrl = setInterval(function(){controlAlgorithm();}, 30); // call the alg. on 30ms
         console.log("Control algorithm has been started."); 
-        if(actualValue <= 890 || actualValue >= 140) {
-            stopControlAlgorithm();
-            board.digitalWrite(13,0);
-        }
+        //if(actualValue <= 890 || actualValue >= 140) {
+        //    stopControlAlgorithm();
+        //    board.digitalWrite(13,0);
+        //}
     }
 };
 
