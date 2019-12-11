@@ -11,6 +11,7 @@
 <div>
 <canvas id="canvas1" width ="200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
 <canvas id="canvas4" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
+<canvas id="canvas7" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
 <br>
 <canvas id="canvas2" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
 <canvas id="canvas5" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
@@ -56,6 +57,7 @@ var graph3; // variable for graph object
 var graph4; // variable for graph object
 var graph5; // variable for graph object
 var graph6; // variable for graph object
+var graph7; // variable for graph object
 
 var divPrint1; // var for object div print
  
@@ -69,6 +71,7 @@ function load() { // function that is started, when we open the page
     graph4 = new Graph("canvas4", 0, 200, -1023, 1023, ["red"], ["Error"], ["0", "200", "-1023", "1023"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size of yValue matrix (if we state one color as eg. ["red"], we assume only one time series, ["red", "green", "blue"] -> three time series) 
     graph5 = new Graph("canvas5", 0, 200, -10000, 10000, ["red"], ["Integ(Err*dt)"], ["0", "200", "-10000", "10000"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size of yValue matrix (if we state one color as eg. ["red"], we assume only one time series, ["red", "green", "blue"] -> three time series) 
     graph6 = new Graph("canvas6", 0, 200, -150, 150, ["red"], ["dError/dt"], ["0", "200", "-150", "150"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size of yValue matrix (if we state one color as eg. ["red"], we assume only one time series, ["red", "green", "blue"] -> three time series) 
+    graph7 = new Graph("canvas7", 0, 2000, 0, 500000, ["red"], ["Int(Abs(Error)dt)"], ["0", "2000", "0", "0.5M"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size o
  
     // create divPrint1 object to output the numbers
     divPrint1 = new LogDiv("print1", 10); // as the argument at the creation of the new object we declare the div name into which the printout of the log will be performed and the number of lines before the scroll
@@ -196,8 +199,10 @@ ws.onmessage = function(event) {
             graph3.plot([msg.KpE, msg.KiIedt, msg.KdDe_dt]);
             graph4.plot([msg.err]); // graph for P part
             graph5.plot([msg.errSum]); // graph for I part
-            graph6.plot([msg.dErr]); // graph for D part            
-            
+            graph6.plot([msg.dErr]); // graph for D part
+            graph7.plot([msg.errSumAbs]); // graph for performance measure
+            graph7.ctx.fillText(parseInt(msg.errSumAbs),70,27);
+
             divPrint1.log(potValue1 + "|" + potValue2 + "|" + msg.error + "|" + msg.pwm);
         break;        
     }

@@ -11,6 +11,7 @@
 <div>
 <canvas id="canvas1" width ="200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
 <canvas id="canvas4" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
+<canvas id="canvas7" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
 <br>
 <canvas id="canvas2" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
 <canvas id="canvas5" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
@@ -19,6 +20,12 @@
 <canvas id="canvas6" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
 <p></p>
 </div>
+Position: <input id="position" value=512 />    
+<button id="sendPosition" onClick="sendPosition()">Send position</button>
+<button id="pulse" onClick="pulse()">Send pulse</button>
+<button id="pulsetimed" onClick="pulseTimed()">Send pulse Timed</button>
+<button id="buttonStop" onClick="stop()">STOP</button>
+<br>
 
 pCoeff: <input id="pCoeff" value="0.1" size="5" />
 <button id="buttonStartControlAlgorithm1" onClick="startControlAlgorithm1();">Start Ctrl Alg1</button>
@@ -29,6 +36,13 @@ Ki: <input id="Ki1" value="0.0055" size = "5" />
 Kd: <input id="Kd1" value="0.25" size = "5" />
 <button id="buttonStartControlAlgorithm2" onClick="startControlAlgorithm2();">Start Ctrl Alg2</button>
 <button id="buttonStopControlAlgorithm" onClick="stopControlAlgorithm();">Stop Ctrl Alg</button>
+<p></p>
+Kp: <input id="Kp2" value="0.5" size = "5" />
+Ki: <input id="Ki2" value="0.008" size = "5" />
+Kd: <input id="Kd2" value="0.35" size = "5" />
+<button id="buttonStartControlAlgorithm3" onClick="startControlAlgorithm3();">Start Ctrl Alg3</button>
+
+
 
 <div id="divForStaticPrint"> </div>
 <p></p>
@@ -56,19 +70,25 @@ var graph3; // variable for graph object
 var graph4; // variable for graph object
 var graph5; // variable for graph object
 var graph6; // variable for graph object
+var graph7; // variable for graph object
 
 var divPrint1; // var for object div print
  
 let ws = new WebSocket("ws://172.16.22.99:8888"); // create socket - connect to it
 var messageJSON;
 
+var intervalPulseFunction;
+var performanceMeasure;
+
 function load() { // function that is started, when we open the page
+    // create graph1 ~ graph7 objects for displaying the graphs
     graph1 = new Graph("canvas1", 0, 200, 0, 1023, ["red", "green"], ["desired", "actual"], ["0", "200", "0", "1023"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size of yValue matrix (if we state one color as eg. ["red"], we assume only one time series, ["red", "green", "blue"] -> three time series) 
     graph2 = new Graph("canvas2", 0, 200, -254, 254, ["orange"], ["PWM"], ["0", "200", "-254", "254"]);
     graph3 = new Graph("canvas3", 0, 200, -100, 100, ["red", "green", "blue"], ["KpE", "KiIedt", "KdDe_dt"], ["0", "200", "-100", "100"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size of yValue matrix (if we state one color as eg. ["red"], we assume only one time series, ["red", "green", "blue"] -> three time series) 
     graph4 = new Graph("canvas4", 0, 200, -1023, 1023, ["red"], ["Error"], ["0", "200", "-1023", "1023"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size of yValue matrix (if we state one color as eg. ["red"], we assume only one time series, ["red", "green", "blue"] -> three time series) 
     graph5 = new Graph("canvas5", 0, 200, -10000, 10000, ["red"], ["Integ(Err*dt)"], ["0", "200", "-10000", "10000"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size of yValue matrix (if we state one color as eg. ["red"], we assume only one time series, ["red", "green", "blue"] -> three time series) 
     graph6 = new Graph("canvas6", 0, 200, -150, 150, ["red"], ["dError/dt"], ["0", "200", "-150", "150"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size of yValue matrix (if we state one color as eg. ["red"], we assume only one time series, ["red", "green", "blue"] -> three time series) 
+    graph7 = new Graph("canvas7", 0, 2000, 0, 500000, ["red"], ["Int(Abs(Error)dt)"], ["0", "2000", "0", "0.5M"]); // arguments: Arg1: canvasId, Arg2: maxX, Arg3: maxY, Arg4: [vector of colors]; this determines the size o
  
     // create divPrint1 object to output the numbers
     divPrint1 = new LogDiv("print1", 10); // as the argument at the creation of the new object we declare the div name into which the printout of the log will be performed and the number of lines before the scroll
@@ -196,8 +216,11 @@ ws.onmessage = function(event) {
             graph3.plot([msg.KpE, msg.KiIedt, msg.KdDe_dt]);
             graph4.plot([msg.err]); // graph for P part
             graph5.plot([msg.errSum]); // graph for I part
-            graph6.plot([msg.dErr]); // graph for D part            
-            
+            graph6.plot([msg.dErr]); // graph for D part
+            graph7.plot([msg.errSumAbs]); // graph for performance measure
+            performanceMeasure = msg.errSumAbs; // write into global var to get results at the end
+            graph7.ctx.fillText(parseInt(msg.errSumAbs),70,27);
+
             divPrint1.log(potValue1 + "|" + potValue2 + "|" + msg.error + "|" + msg.pwm);
         break;        
     }
@@ -218,6 +241,46 @@ function startControlAlgorithm2() {
     messageJSON = {"type": "startControlAlgorithm", "ctrlAlgNo": 2, "Kp1": Kp1, "Ki1": Ki1, "Kd1": Kd1};
     ws.send(JSON.stringify(messageJSON)); // we have to stringify JSON to send it over websocket    
 }
+
+function sendPosition () {
+    var positionValue = document.getElementById("position").value;
+    messageJSON = {"type": "sendPosition", "positionValue": positionValue};
+    ws.send(JSON.stringify(messageJSON)); // we have to stringify JSON to send it over websocket 
+};
+    function pulse() {
+    var positionInterval = 0;
+    intervalPulseFunction = setInterval(function() {
+    if (positionInterval == 320) {
+        positionInterval = 704;
+    }
+    else {
+        positionInterval = 320;
+    }
+    messageJSON = {"type": "sendPosition", "positionValue": positionInterval};
+    ws.send(JSON.stringify(messageJSON)); // we have to stringify JSON to send it over websocket 
+    }, 2500);
+    }
+    
+function stop () {
+document.getElementById("divForStaticPrint").innerHTML = document.getElementById("divForStaticPrint").innerHTML + " | C = " + performanceMeasure;
+clearInterval(intervalPulseFunction);
+}
+
+function pulseTimed () {
+        startControlAlgorithm2();
+        pulse();
+        setTimeout(function() {stop();}, 12000); // wait for 12000ms to get performance measure value out
+}
+
+function startControlAlgorithm3() {
+    stopControlAlgorithm(); // just in case, if it is not started
+    var Kp2 = document.getElementById("Kp2").value; // read the value of coeff from input field
+    var Ki2 = document.getElementById("Ki2").value; // read the value of coeff from input field
+    var Kd2 = document.getElementById("Kd2").value; // read the value of coeff from input field
+    messageJSON = {"type": "startControlAlgorithm", "ctrlAlgNo": 3, "Kp2": Kp2, "Ki2": Ki2, "Kd2": Kd2};
+    ws.send(JSON.stringify(messageJSON)); // we have to stringify JSON to send it over websocket
+}
+    
 
 
 function stopControlAlgorithm () {
