@@ -20,4 +20,4 @@ http.createServer(function(req, res){ // http.createServer([requestListener]) | 
     res.writeHead(200, {"Content-Type": "text/plain"});
     res.write("For test write into browser address line: http://172.16.22.210:8080/1 \n");
     res.end("The value of operator: " + operator);
-}).listen(8080, "172.16.22.210");
+}).listen(8080, "172.16.22.99");
